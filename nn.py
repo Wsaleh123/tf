@@ -1,62 +1,83 @@
-## blue points are 0 and red points are 1
-
-from sklearn.datasets import make_blobs
+import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
+import matplotlib.image as mpimg
 
 
-data = make_blobs(n_samples = 10000,n_features=2,centers=2,random_state=20)
-features = data[0] 
-labels = data[1]
+from tensorflow.examples.tutorials.mnist import input_data
 
-x_coordinate = features[:,0]
-y_coordinate = features[:,1]
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
-plt.scatter(x_coordinate, y_coordinate, c=labels, cmap= 'coolwarm')
-plt.show()
-print(features)
-print(labels)
+x = tf.placeholder(tf.float32, [None, 28,28,1]) ## A placeholder for the data
 
-## Neural Network
+K=200
+L=100
+M=60
+N=30
 
-#Defining the variables
-w = tf.Variable(np.random.rand(5000,2))
-b = tf.Variable(.04)
+w1 = tf.Variable(tf.truncated_normal([28*28,K], stddev=0.1))
+b1 = tf.Variable(tf.zeros([K]))
 
-#defining the batch_size
-batch_size = 8
+w2 = tf.Variable(tf.truncated_normal([K,L],stddev=0.1))
+b2 = tf.Variable(tf.zeros([L]))
 
-#Defining the placeholders
-x = tf.placeholder(tf.float64, [batch_size]) #data to be fed
-yph = tf.placeholder(tf.float64, [batch_size]) #labels
+w3 = tf.Variable(tf.truncated_normal([L,M],stddev=0.1))
+b3 = tf.Variable(tf.zeros([M]))
 
+w4 = tf.Variable(tf.truncated_normal([M,N],stddev=0.1))
+b4 = tf.Variable(tf.zeros([N]))
 
-#Creating the model
-y = tf.nn.sigmoid(w*x +b)
+w5 = tf.Variable(tf.truncated_normal([N,10],stddev=0.1))
+b5 = tf.Variable(tf.zeros([10]))
 
-#defining the error function
-error = tf.reduce_sum(tf.square(yph - y))
+x = tf.reshape(x,[-1,28*28])
 
-#defining the optimizer (essentially the task)
-optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
-train = optimizer.minimize(error)
+y1 = tf.nn.relu(tf.matmul(x,w1)+b1)
+y2 = tf.nn.relu(tf.matmul(y1,w2)+b2)
+y3 = tf.nn.relu(tf.matmul(y2,w3)+b3)
+y4 = tf.nn.relu(tf.matmul(y3,w4)+b4)
+y = tf.nn.softmax(tf.matmul(y4,w5)+b5)
+
+Y_ = tf.placeholder(tf.float32, [None, 10])
+
+cross_entropy = -tf.reduce_sum(Y_*tf.log(y))
+is_correct = tf.equal(tf.argmax(y,1), tf.argmax(Y_,1))
+acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+summary = tf.summary.scalar("Loss", acc)
+optimizer = tf.train.AdamOptimizer(0.003)
+train_step = optimizer.minimize(cross_entropy)
 
 init = tf.global_variables_initializer()
-with tf.Session() as sess:
-    sess.run(init)
-    
-    batches =10000
-    
-    for i in range(batches):
-        rand_ind = np.random.randint(len(features), size =batch_size)
-        
-        feed = {x:features[rand_ind],yph:labels[rand_ind]}
-        
-        sess.run(train, feed_dict = feed)
 
-    model_w, model_b = sess.run([w,b])
+sess = tf.Session()
+sess.run(init)
+
+accuracy_mat = []
+cost_mat = []
+writer = tf.summary.FileWriter("logs", sess.graph)
+for i in range(1000):
+    batch_X, batch_Y = mnist.train.next_batch(100)
+    train_data = {x:batch_X, Y_:batch_Y}
+
+    sess.run(train_step, feed_dict=train_data)
+
+    a,c, b = sess.run([acc, cross_entropy, summary], feed_dict = train_data)
+    writer.add_summary(b, i)
+    accuracy_mat.append(a*100)
+    cost_mat.append(c)
+
+batchX, batch_Y = mnist.test.next_batch(1)
+train_data = {x:batch_X, Y_:batch_Y}
+sess.run(train_step, feed_dict=train_data)
+
+v, g = sess.run([x,y], feed_dict=train_data)
+v = v[0].reshape(28,28)
+v = np.stack((v,)*3, axis=-1)
+plt.imshow(v)
+prediction = np.argmax(g[0])
+accuracy = g[0][prediction] *100
+print("Prediction: ", prediction)
+print("Accuracy: ", accuracy)
 
 
- 
-
+plt.show()
