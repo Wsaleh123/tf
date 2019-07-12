@@ -43,8 +43,7 @@ Y_ = tf.placeholder(tf.float32, [None, 10])
 cross_entropy = -tf.reduce_sum(Y_*tf.log(y))
 is_correct = tf.equal(tf.argmax(y,1), tf.argmax(Y_,1))
 acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
-summary = tf.summary.scalar("Loss", acc)
-optimizer = tf.train.AdamOptimizer(0.003)
+optimizer = tf.train.AdamOptimizer(0.001)
 train_step = optimizer.minimize(cross_entropy)
 
 init = tf.global_variables_initializer()
@@ -52,32 +51,22 @@ init = tf.global_variables_initializer()
 sess = tf.Session()
 sess.run(init)
 
-accuracy_mat = []
-cost_mat = []
-writer = tf.summary.FileWriter("logs", sess.graph)
 for i in range(1000):
     batch_X, batch_Y = mnist.train.next_batch(100)
     train_data = {x:batch_X, Y_:batch_Y}
 
     sess.run(train_step, feed_dict=train_data)
 
-    a,c, b = sess.run([acc, cross_entropy, summary], feed_dict = train_data)
-    writer.add_summary(b, i)
-    accuracy_mat.append(a*100)
-    cost_mat.append(c)
-
-batchX, batch_Y = mnist.test.next_batch(1)
+batch_X, batch_Y = mnist.train.next_batch(1)
 train_data = {x:batch_X, Y_:batch_Y}
-sess.run(train_step, feed_dict=train_data)
+print(batch_Y)
 
-v, g = sess.run([x,y], feed_dict=train_data)
-v = v[0].reshape(28,28)
-v = np.stack((v,)*3, axis=-1)
-plt.imshow(v)
-prediction = np.argmax(g[0])
-accuracy = g[0][prediction] *100
-print("Prediction: ", prediction)
-print("Accuracy: ", accuracy)
+a = sess.run(y, feed_dict =train_data)
+prediction = np.argmax(a)
+plt.imshow(np.reshape(batch_X,(28,28)))
+print('Prediction: ' + str(prediction))
+print('Accuracy: ' + str(a[0][prediction]))
 
 
 plt.show()
+
