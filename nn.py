@@ -85,10 +85,12 @@ sess.run(init)
 acc_test_mat = []
 acc_train_mat = []
 
+#Learning rate decay
 def learning_rate_decay(do, e_num):
     learning_rate = do * np.power(0.9995,e_num)
     return learning_rate
-    
+
+#Progress Bar for Vizualization of progress
 print('Progress: ')
 
 for i in pbar(range(1000)):
