@@ -2,9 +2,10 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-
-
+from progressbar import ProgressBar
 from tensorflow.examples.tutorials.mnist import input_data
+
+pbar = ProgressBar()
 
 #Loading the data
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
@@ -45,16 +46,16 @@ pkeep = tf.placeholder(tf.float32)
 
 #Defining the model for each layer
 y1 = tf.nn.relu(tf.matmul(x,w1)+b1)
-y1 = tf.nn.dropout(y1,pkeep)
+y1 = tf.nn.dropout(y1,rate = 1-pkeep)
 
 y2 = tf.nn.relu(tf.matmul(y1,w2)+b2)
-y2 = tf.nn.dropout(y2,pkeep)
+y2 = tf.nn.dropout(y2,rate =1- pkeep)
 
 y3 = tf.nn.relu(tf.matmul(y2,w3)+b3)
-y3 = tf.nn.dropout(y3,pkeep)
+y3 = tf.nn.dropout(y3,rate = 1- pkeep)
 
 y4 = tf.nn.relu(tf.matmul(y3,w4)+b4)
-y4 = tf.nn.dropout(y4,pkeep)
+y4 = tf.nn.dropout(y4,rate = 1-pkeep)
 
 y = tf.nn.softmax(tf.matmul(y4,w5)+b5)
 
@@ -69,7 +70,8 @@ is_correct = tf.equal(tf.argmax(y,1), tf.argmax(Y_,1))
 acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
 #Optimizing the loss function
-optimizer = tf.train.AdamOptimizer(0.001)
+learning_rate = tf.placeholder(tf.float32)
+optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 train_step = optimizer.minimize(cross_entropy)
 
 #Initiating the global variables
@@ -83,19 +85,25 @@ sess.run(init)
 acc_test_mat = []
 acc_train_mat = []
 
+def learning_rate_decay(do, e_num):
+    learning_rate = do * np.power(0.9995,e_num)
+    return learning_rate
+    
+print('Progress: ')
 
-for i in range(1000):
+for i in pbar(range(1000)):
 
     #Feeding in training data
     batch_X, batch_Y = mnist.train.next_batch(100)
-    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75}
+    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75, learning_rate: learning_rate_decay(0.003, i+1)}
 
     sess.run(train_step, feed_dict=train_data)
+
     #Appending training data accuracy for each epoch
     acc_train_mat.append(sess.run(acc, feed_dict = train_data) *100)
 
     #Feeding in testing data
-    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:0.75}
+    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:1.00, learning_rate: learning_rate_decay(0.003,i+1)}
 
     #Appending testing data accuracy for each epich
     acc_test_mat.append(sess.run(acc, feed_dict = test_data)*100)
@@ -103,10 +111,10 @@ for i in range(1000):
 
 #Plotting accuracy for both training data (in orange) and testing data (in blue)
 x_axis = np.linspace(0,1000,1000)
-plt.plot(x_axis, acc_train_mat, 'orange')
-plt.plot(x_axis, acc_test_mat, 'blue')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
+plt.plot(x_axis, acc_train_mat, 'blue')
+plt.plot(x_axis, acc_test_mat, 'red')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
 plt.title('Model Accuracy')
 plt.legend(['training', 'testing'], loc='best')
 
