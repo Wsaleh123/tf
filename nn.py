@@ -20,23 +20,23 @@ N=30
 
 #First Layer
 w1 = tf.Variable(tf.truncated_normal([28*28,K], stddev=0.1))
-b1 = tf.Variable(tf.zeros([K]))
+b1 = tf.Variable(tf.truncated_normal([K]))
 
 #Second Layer
 w2 = tf.Variable(tf.truncated_normal([K,L],stddev=0.1))
-b2 = tf.Variable(tf.zeros([L]))
+b2 = tf.Variable(tf.truncated_normal([L]))
 
 #Thrid Layer
 w3 = tf.Variable(tf.truncated_normal([L,M],stddev=0.1))
-b3 = tf.Variable(tf.zeros([M]))
+b3 = tf.Variable(tf.truncated_normal([M]))
 
 #Fourth Layer
 w4 = tf.Variable(tf.truncated_normal([M,N],stddev=0.1))
-b4 = tf.Variable(tf.zeros([N]))
+b4 = tf.Variable(tf.truncated_normal([N]))
 
 #Fifth Layer
 w5 = tf.Variable(tf.truncated_normal([N,10],stddev=0.1))
-b5 = tf.Variable(tf.zeros([10]))
+b5 = tf.Variable(tf.truncated_normal([10]))
 
 #reshaping the images
 x = tf.reshape(x,[-1,28*28])
@@ -70,7 +70,12 @@ is_correct = tf.equal(tf.argmax(y,1), tf.argmax(Y_,1))
 acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
 #Optimizing the loss function
-learning_rate = tf.placeholder(tf.float32)
+#Learning rate decay
+global_step = tf.Variable(0, trainable=False)
+starter_learning_rate = 0.1
+learning_rate = tf.compat.v1.train.exponential_decay(starter_learning_rate,
+global_step,
+                                           100000, 0.96, staircase=True)
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 train_step = optimizer.minimize(cross_entropy)
 
@@ -85,19 +90,14 @@ sess.run(init)
 acc_test_mat = []
 acc_train_mat = []
 
-#Learning rate decay
-def learning_rate_decay(do, e_num):
-    learning_rate = do * np.power(0.9995,e_num)
-    return learning_rate
-
 #Progress Bar for Vizualization of progress
 print('Progress: ')
 
-for i in pbar(range(1000)):
+for i in pbar(range(10000)):
 
     #Feeding in training data
     batch_X, batch_Y = mnist.train.next_batch(100)
-    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75, learning_rate: learning_rate_decay(0.003, i+1)}
+    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75}
 
     sess.run(train_step, feed_dict=train_data)
 
@@ -105,14 +105,14 @@ for i in pbar(range(1000)):
     acc_train_mat.append(sess.run(acc, feed_dict = train_data) *100)
 
     #Feeding in testing data
-    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:1.00, learning_rate: learning_rate_decay(0.003,i+1)}
+    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:1.00}
 
     #Appending testing data accuracy for each epich
     acc_test_mat.append(sess.run(acc, feed_dict = test_data)*100)
 
 
 #Plotting accuracy for both training data (in orange) and testing data (in blue)
-x_axis = np.linspace(0,1000,1000)
+x_axis = np.linspace(0,10000,10000)
 plt.plot(x_axis, acc_train_mat, 'blue')
 plt.plot(x_axis, acc_test_mat, 'red')
 plt.ylabel('Accuracy')
