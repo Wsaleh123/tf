@@ -1,10 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
 from progressbar import ProgressBar
 from tensorflow.examples.tutorials.mnist import input_data
 import math
+tf.set_random_seed(0)
 
 pbar = ProgressBar()
 
@@ -21,19 +21,19 @@ N=30
 
 #First Layer
 w1 = tf.Variable(tf.truncated_normal([28*28,K], stddev=0.1))
-b1 = tf.Variable(tf.ones([K]))
+b1 = tf.Variable(tf.ones([K])/10)
 
 #Second Layer
 w2 = tf.Variable(tf.truncated_normal([K,L],stddev=0.1))
-b2 = tf.Variable(tf.ones([L]))
+b2 = tf.Variable(tf.ones([L])/10)
 
 #Thrid Layer
 w3 = tf.Variable(tf.truncated_normal([L,M],stddev=0.1))
-b3 = tf.Variable(tf.ones([M]))
+b3 = tf.Variable(tf.ones([M])/10)
 
 #Fourth Layer
 w4 = tf.Variable(tf.truncated_normal([M,N],stddev=0.1))
-b4 = tf.Variable(tf.ones([N]))
+b4 = tf.Variable(tf.ones([N])/10)
 
 #Fifth Layer
 w5 = tf.Variable(tf.truncated_normal([N,10],stddev=0.1))
@@ -58,13 +58,14 @@ y3 = tf.nn.dropout(y3,pkeep)
 y4 = tf.nn.relu(tf.matmul(y3,w4)+b4)
 y4 = tf.nn.dropout(y4,pkeep)
 
-y = tf.nn.softmax(tf.matmul(y4,w5)+b5)
+Ylogits = tf.matmul(y4,w5)+b5
+y = tf.nn.softmax(Ylogits)
 
 #Defining the placeholder for the labels
 Y_ = tf.placeholder(tf.float32, [None, 10])
 
 #Defining the loss function
-cross_entropy = -tf.reduce_sum(Y_*tf.log(y))
+cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=Ylogits,labels=Y_))
 
 #Computing the accuracy 
 is_correct = tf.equal(tf.argmax(y,1), tf.argmax(Y_,1))
@@ -74,7 +75,7 @@ acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 #Learning rate decay
 global_step = tf.placeholder(tf.int32)
 learning_rate = 0.0001 + tf.train.exponential_decay(0.003, global_step, 2000, 1/math.e)
-optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+optimizer = tf.train.AdamOptimizer(learning_rate)
 train_step = optimizer.minimize(cross_entropy)
 
 #Initiating the global variables
