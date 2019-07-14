@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from progressbar import ProgressBar
 from tensorflow.examples.tutorials.mnist import input_data
+import math
 
 pbar = ProgressBar()
 
@@ -20,23 +21,23 @@ N=30
 
 #First Layer
 w1 = tf.Variable(tf.truncated_normal([28*28,K], stddev=0.1))
-b1 = tf.Variable(tf.truncated_normal([K]))
+b1 = tf.Variable(tf.ones([K]))
 
 #Second Layer
 w2 = tf.Variable(tf.truncated_normal([K,L],stddev=0.1))
-b2 = tf.Variable(tf.truncated_normal([L]))
+b2 = tf.Variable(tf.ones([L]))
 
 #Thrid Layer
 w3 = tf.Variable(tf.truncated_normal([L,M],stddev=0.1))
-b3 = tf.Variable(tf.truncated_normal([M]))
+b3 = tf.Variable(tf.ones([M]))
 
 #Fourth Layer
 w4 = tf.Variable(tf.truncated_normal([M,N],stddev=0.1))
-b4 = tf.Variable(tf.truncated_normal([N]))
+b4 = tf.Variable(tf.ones([N]))
 
 #Fifth Layer
 w5 = tf.Variable(tf.truncated_normal([N,10],stddev=0.1))
-b5 = tf.Variable(tf.truncated_normal([10]))
+b5 = tf.Variable(tf.zeros([10]))
 
 #reshaping the images
 x = tf.reshape(x,[-1,28*28])
@@ -46,16 +47,16 @@ pkeep = tf.placeholder(tf.float32)
 
 #Defining the model for each layer
 y1 = tf.nn.relu(tf.matmul(x,w1)+b1)
-y1 = tf.nn.dropout(y1,rate = 1-pkeep)
+y1 = tf.nn.dropout(y1,pkeep)
 
 y2 = tf.nn.relu(tf.matmul(y1,w2)+b2)
-y2 = tf.nn.dropout(y2,rate =1- pkeep)
+y2 = tf.nn.dropout(y2,pkeep)
 
 y3 = tf.nn.relu(tf.matmul(y2,w3)+b3)
-y3 = tf.nn.dropout(y3,rate = 1- pkeep)
+y3 = tf.nn.dropout(y3,pkeep)
 
 y4 = tf.nn.relu(tf.matmul(y3,w4)+b4)
-y4 = tf.nn.dropout(y4,rate = 1-pkeep)
+y4 = tf.nn.dropout(y4,pkeep)
 
 y = tf.nn.softmax(tf.matmul(y4,w5)+b5)
 
@@ -71,11 +72,8 @@ acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
 
 #Optimizing the loss function
 #Learning rate decay
-global_step = tf.Variable(0, trainable=False)
-starter_learning_rate = 0.1
-learning_rate = tf.compat.v1.train.exponential_decay(starter_learning_rate,
-global_step,
-                                           100000, 0.96, staircase=True)
+global_step = tf.placeholder(tf.int32)
+learning_rate = 0.0001 + tf.train.exponential_decay(0.003, global_step, 2000, 1/math.e)
 optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 train_step = optimizer.minimize(cross_entropy)
 
@@ -94,24 +92,22 @@ acc_train_mat = []
 print('Progress: ')
 
 for i in pbar(range(10000)):
-
     #Feeding in training data
     batch_X, batch_Y = mnist.train.next_batch(100)
-    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75}
+    train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75, global_step:i}
 
     sess.run(train_step, feed_dict=train_data)
 
-    #Appending training data accuracy for each epoch
+    #Appending training data accuracy for each iteration
     acc_train_mat.append(sess.run(acc, feed_dict = train_data) *100)
 
     #Feeding in testing data
-    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:1.00}
+    test_data = {x:mnist.test.images, Y_:mnist.test.labels, pkeep:1.00, global_step:i}
 
-    #Appending testing data accuracy for each epich
+    #Appending testing data accuracy for each iteration
     acc_test_mat.append(sess.run(acc, feed_dict = test_data)*100)
 
-
-#Plotting accuracy for both training data (in orange) and testing data (in blue)
+#Plotting accuracy for both training data (in blue) and testing data (in red)
 x_axis = np.linspace(0,10000,10000)
 plt.plot(x_axis, acc_train_mat, 'blue')
 plt.plot(x_axis, acc_test_mat, 'red')
