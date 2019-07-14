@@ -92,7 +92,7 @@ acc_train_mat = []
 #Progress Bar for Vizualization of progress
 print('Progress: ')
 
-for i in pbar(range(10000)):
+for i in pbar(range(1000)):
     #Feeding in training data
     batch_X, batch_Y = mnist.train.next_batch(100)
     train_data = {x:batch_X, Y_:batch_Y, pkeep:0.75, global_step:i}
@@ -109,7 +109,7 @@ for i in pbar(range(10000)):
     acc_test_mat.append(sess.run(acc, feed_dict = test_data)*100)
 
 #Plotting accuracy for both training data (in blue) and testing data (in red)
-x_axis = np.linspace(0,10000,10000)
+x_axis = np.linspace(0,1000,1000)
 plt.plot(x_axis, acc_train_mat, 'blue')
 plt.plot(x_axis, acc_test_mat, 'red')
 plt.ylabel('Accuracy')
