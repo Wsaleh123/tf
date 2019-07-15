@@ -108,3 +108,8 @@ plt.legend(['training', 'testing'], loc='best')
 
 plt.show()
  
+'''
+ 100% training accuracy
+ Just above 99% testing accuracy 
+ See CNN_acc.png and CNN_acc1.png
+'''
